@@ -1,6 +1,8 @@
 # 마이바티스 프로그래밍 원리와 활용
 
-- '마이바티스 프로그래밍 원리와 활용'을 보고 만든 학습자료 입니다. 개인 학습을 위해서 Database는 PostgreSQL을 활용하였고, 코드는 직접 작성했습니다.
+- '마이바티스 프로그래밍 원리와 활용'을 보고 GPT4를 활용해서 만든 학습자료입니다.
+- '마이바티스 프로그래밍 원리와 활용'은 Oracle, MyBatis, Spring, JSP가 사용되었습니다.
+- 본 Respository는 개인 학습을 위해서 PostgreSQL, MyBatis, SpringBoot, Thymeleaf을 활용하였고, 코드는 직접 작성했습니다. Spring이랑 Tomcat을 활용한 환경설정을 하기가 싫네요... 해보실 분은 책 구매해서 해보면 좋을 것 같아요.
 
 ## 목차
 
@@ -89,20 +91,112 @@ try (SqlSession session = sqlSessionFactory.openSession()) {
 }
 ```
 
-### 코드 설명
+### 전체적인 코드 설명
 
 - PostgreSQL, JDBC, Thymeleaf, SpringBoot를 이용한 간단한 상점 추가 및 조회 사이트.
-- JDBC를 통해 직접 데이터와 매핑을 해봄으로써 JDBC를 이해함에 목적이 있음.
+- JDBC를 통해 직접 데이터와 매핑을 해봄으로써 JDBC를 이해하고, 추후에 MyBatis로 단순화 되는 것을 확인하는데 목적이 있음.
 
 ## 2. 마이바티스 프로그래밍 시작
 
-Getting Started with MyBatis Programming
+### MyBatis 구성
 
-###
+- **MyBatis Mapper XML**: SQL 쿼리와 그에 대응하는 메소드를 연결하는 매핑 정보를 담고 있음.
+- **MyBatis Settings XML**: MyBatis 동작 설정을 위한 파일로, 데이터베이스 연결과 트랜잭션 관리 방법 등을 설정할 수 있음.
+- **실행 클래스**: 실제 비즈니스 로직을 수행하는 클래스로, Mapper를 호출하여 데이터베이스 연산을 실행함.
+- **실행 및 로깅 설정**: 애플리케이션의 실행 정보를 로깅하는 방법을 설정함.
+
+### MyBatis Mapper XML 작성하기
+
+- **파일명 명명 규칙**: 일반적으로 Mapper의 기능을 나타내는 이름을 사용함. 예를 들어, `UserMapper.xml`과 같이 특정 도메인 객체 또는 테이블명을 기준으로 명명함.
+- **Parameter**: SQL 쿼리에 전달될 입력 파라미터를 지정합니다. parameterType 속성으로 전달될 객체의 타입을 지정하거나, parameterMap을 사용하여 복수의 데이터를 맵 형태로 전달할 수 있음.
+
+```xml
+    <!-- 단일 파라미터 전달 예제 -->
+<mapper namespace="org.myapp.mapper.UserMapper">
+    <select id="selectUserById" parameterType="int" resultType="org.myapp.model.User">
+        SELECT id, username, email FROM users WHERE id = #{id}
+    </select>
+</mapper>
+
+<!-- 맵 파라미터 전달 예제 -->
+<mapper namespace="org.myapp.mapper.UserMapper">
+    <insert id="insertUser" parameterType="map">
+        INSERT INTO users (username, email, phone) VALUES (#{username}, #{email}, #{phone})
+    </insert>
+</mapper>
+```
+
+- **Result**: SQL 쿼리의 결과를 매핑하는 설정. resultType 속성은 쿼리 결과를 자바 클래스로 매핑하고, resultMap을 사용하여 좀 더 복잡한 결과 구조를 매핑할 수 있음.
+
+```xml
+<!-- 결과 타입 매핑 예제 -->
+<mapper namespace="org.myapp.mapper.UserMapper">
+    <select id="selectAllUsers" resultType="org.myapp.model.User">
+        SELECT id, username, email FROM users
+    </select>
+</mapper>
+
+<!-- 결과 맵 매핑 예제 -->
+<mapper namespace="org.myapp.mapper.UserMapper">
+    <resultMap id="userResultMap" type="org.myapp.model.User">
+        <id column="id" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="email" property="email"/>
+    </resultMap>
+
+    <select id="selectUserWithDetail" resultMap="userResultMap">
+        SELECT u.id, u.username, u.email FROM users u
+        WHERE u.id = #{id}
+    </select>
+</mapper>
+```
+
+### MyBatis Config XML 작성하기
+
+- MyBatis의 전체적인 설정을 담당하는 중요한 파일. 이 설정 파일에서는 데이터베이스 연결 정보, 트랜잭션 관리 설정, Mapper XML 파일의 위치 등을 지정할 수 있음.
+
+```xml
+<configuration>
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.jdbc.Driver"/>
+                <property name="url" value="jdbc:mysql://localhost:3306/mydatabase"/>
+                <property name="username" value="user"/>
+                <property name="password" value="password"/>
+            </dataSource>
+        </environment>
+    </environments>
+    <mappers>
+        <mapper resource="org/myapp/mapper/UserMapper.xml"/>
+    </mappers>
+</configuration>
+```
+
+### 실행 클래스
+
+- MyBatis를 사용하여 데이터베이스 작업을 수행하는 클래스를 작성함. 이 클래스에서는 MyBatis SqlSession을 사용하여 Mapper를 호출하고, 필요한 비즈니스 로직을 수행함.
+
+```java
+public class MyApp {
+    public static void main(String[] args) {
+        try (SqlSession session = MyBatisUtil.getSqlSessionFactory().openSession()) {
+            UserMapper mapper = session.getMapper(UserMapper.class);
+            User user = mapper.getUserById(1);
+            System.out.println(user.getName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+### 실행 및 로깅 설정
+
+- MyBatis와 함께 로깅 프레임워크를 설정하여 실행 정보를 로그로 기록할 수 있음. 보통 Log4j 또는 SLF4J 같은 로깅 라이브러리와 통합하여 사용함. 로깅 설정은 log4j.properties 파일이나 logback.xml 파일을 통해 관리할 수 있음. 이를 통해 SQL 쿼리 실행 시점, 결과 등의 정보를 기록하여 디버깅 시 활용할 수 있음.
 
 ## 3. 데이터 관리를 위한 마이바티스 프로그래밍
-
-MyBatis Programming for Data Management
 
 ## 4. 마이바티스 설정
 

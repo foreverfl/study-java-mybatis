@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: IntroductionToMyBatis
+
+  config:
+    import: classpath:secrets.yml
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
+
+  devtool:
+    restart:
+      enabled: true

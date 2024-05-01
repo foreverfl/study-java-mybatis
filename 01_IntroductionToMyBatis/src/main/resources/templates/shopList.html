@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <title>All Shops</title>
+  </head>
+  <body>
+    <h1>All Shops</h1>
+    <ul>
+      <li th:each="shop : ${shops}">
+        <a th:href="@{/shop(shopNo=${shop.shopNo})}" th:text="${shop.shopName}"
+          >Shop Link</a
+        >
+      </li>
+    </ul>
+
+    <!-- 상점 입력 폼 -->
+    <h2>Add New Shop</h2>
+    <form
+      action="#"
+      th:action="@{/addShop}"
+      th:object="${newShop}"
+      method="post"
+    >
+      <p>Name: <input type="text" th:field="*{shopName}" /></p>
+      <p>Location: <input type="text" th:field="*{shopLocation}" /></p>
+      <p><input type="submit" value="Submit" /></p>
+    </form>
+  </body>
+</html>
